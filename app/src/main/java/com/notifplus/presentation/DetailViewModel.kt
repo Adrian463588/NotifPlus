@@ -45,12 +45,13 @@ class DetailViewModel @Inject constructor(
         }
     }
 
-    fun delete() {
+    fun delete(onComplete: () -> Unit = {}) {
         viewModelScope.launch {
             _detail.value?.let { detail ->
                 repository.delete(detail.summary.threadId)
                 _detail.value = null
             }
+            onComplete()
         }
     }
 }

@@ -8,16 +8,19 @@ import com.notifplus.domain.model.HistoryQuery
 import com.notifplus.domain.model.NotificationThreadSummary
 import com.notifplus.domain.repository.NotificationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 data class HistoryUiState(
     val searchText: String = "",
@@ -25,22 +28,35 @@ data class HistoryUiState(
 )
 
 @HiltViewModel
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class HistoryViewModel @Inject constructor(
     private val repository: NotificationRepository,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(HistoryUiState())
-    val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
+    private val _searchText = MutableStateFlow("")
+    private val _packageFilter = MutableStateFlow<String?>(null)
 
-    val notifications: Flow<PagingData<NotificationThreadSummary>> = _uiState
-        .flatMapLatest { state -> repository.observeHistory(HistoryQuery(state.searchText, state.packageName)) }
-        .cachedIn(viewModelScope)
+    val uiState: StateFlow<HistoryUiState> = combine(_searchText, _packageFilter) { text, pkg ->
+        HistoryUiState(searchText = text, packageName = pkg)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
+
+    val notifications: Flow<PagingData<NotificationThreadSummary>> = combine(
+        _searchText.debounce(300L),
+        _packageFilter,
+    ) { text, pkg ->
+        HistoryQuery(text.trim(), pkg)
+    }.flatMapLatest { query ->
+        repository.observeHistory(query)
+    }.cachedIn(viewModelScope)
 
     val knownPackages = repository.observeKnownPackages()
 
-    fun onSearchChanged(value: String) = _uiState.update { it.copy(searchText = value) }
+    fun onSearchChanged(value: String) {
+        _searchText.value = value
+    }
 
-    fun setPackageFilter(packageName: String?) = _uiState.update { it.copy(packageName = packageName) }
+    fun setPackageFilter(packageName: String?) {
+        _packageFilter.value = packageName
+    }
 
     fun markRead(threadId: String, isRead: Boolean) {
         viewModelScope.launch { repository.markRead(threadId, isRead) }

@@ -1,8 +1,12 @@
 package com.notifplus.data.repository
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.PowerManager
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import androidx.core.content.getSystemService
@@ -43,7 +47,45 @@ class NotificationAccessRepositoryImpl @Inject constructor(
 
     override fun requestRebind(): Boolean = runCatching {
         if (!isAccessGranted()) return false
+
+        // Step 1: Standard API requestRebind
         NotificationListenerService.requestRebind(componentName)
+
+        // Step 2: Toggle component state via PackageManager to resurrect zombie binder connections
+        val pm = context.packageManager
+        pm.setComponentEnabledSetting(
+            componentName,
+            PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+            PackageManager.DONT_KILL_APP,
+        )
+        pm.setComponentEnabledSetting(
+            componentName,
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+            PackageManager.DONT_KILL_APP,
+        )
         true
     }.getOrDefault(false)
+
+    override fun isIgnoringBatteryOptimizations(): Boolean {
+        val powerManager = context.getSystemService<PowerManager>() ?: return true
+        return powerManager.isIgnoringBatteryOptimizations(context.packageName)
+    }
+
+    @SuppressLint("BatteryLife")
+    override fun requestIgnoreBatteryOptimizations() {
+        runCatching {
+            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = Uri.parse("package:${context.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        }.onFailure {
+            runCatching {
+                val fallbackIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(fallbackIntent)
+            }
+        }
+    }
 }

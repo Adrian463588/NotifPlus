@@ -8,6 +8,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.notifplus.service.RetentionCleanupWorker
 import dagger.hilt.android.HiltAndroidApp
+import com.notifplus.domain.repository.NotificationAccessRepository
 import com.notifplus.domain.usecase.DeleteExpiredNotificationsUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +21,7 @@ import java.util.concurrent.TimeUnit
 class NotifPlusApplication : Application(), Configuration.Provider {
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var deleteExpiredNotifications: DeleteExpiredNotificationsUseCase
+    @Inject lateinit var accessRepository: NotificationAccessRepository
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -28,6 +30,9 @@ class NotifPlusApplication : Application(), Configuration.Provider {
         super.onCreate()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             runCatching { deleteExpiredNotifications() }
+            if (accessRepository.isAccessGranted()) {
+                accessRepository.requestRebind()
+            }
         }
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "notifplus-retention-cleanup",

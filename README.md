@@ -1,11 +1,11 @@
 # NotifPlus 🔔
 
 <p align="center">
-  <img src="device-test-final-20260802.png" alt="NotifPlus Banner" width="280" />
+  <img src="docs/preview.png" alt="NotifPlus Live Preview" width="280" />
 </p>
 
 <p align="center">
-  <strong>Privacy-First Android Local Notification History & Media Archiving Application</strong>
+  <strong>Privacy-First Android Local Notification History & Media Archiving Application (NotiStar-Style Background Resilience)</strong>
 </p>
 
 <p align="center">
@@ -19,9 +19,17 @@
 
 ---
 
+## 📱 Live Device Preview
+
+| Riwayat Notifikasi | Aturan Aplikasi | Detail Notifikasi | Pengaturan & Retensi |
+| :---: | :---: | :---: | :---: |
+| <img src="docs/preview.png" width="200" alt="Riwayat Screen" /> | <img src="docs/app_rules.png" width="200" alt="App Rules Screen" /> | <img src="docs/detail.png" width="200" alt="Detail Screen" /> | <img src="docs/settings.png" width="200" alt="Settings Screen" /> |
+
+---
+
 ## 📌 Project Overview
 
-**NotifPlus** adalah aplikasi pencatat dan pengarsip riwayat notifikasi lokal (*local notification history*) untuk perangkat Android dengan standar keamanan dan privasi tingkat tinggi (**Zero-Internet Privacy & DevSecOps Best Practices**).
+**NotifPlus** adalah aplikasi pencatat dan pengarsip riwayat notifikasi lokal (*local notification history*) untuk perangkat Android dengan standar keamanan dan privasi tingkat tinggi (**Zero-Internet Privacy & DevSecOps Best Practices**) serta keandalan penangkapan latar belakang tanpa jeda seperti **Samsung NotiStar**.
 
 Seringkali pesan atau notifikasi penting diubah, dihapus, atau ditarik oleh pengirim pada aplikasi perpesanan (misalnya WhatsApp, Telegram, dll.), atau tidak sengaja terhapus dari panel notifikasi sistem. NotifPlus menangkap setiap peristiwa notifikasi yang masuk melalui `NotificationListenerService` secara *immutable snapshot*, sehingga riwayat pesan awal beserta lampiran medianya tetap tersimpan secara aman di penyimpanan privat perangkat.
 
@@ -33,12 +41,23 @@ Seringkali pesan atau notifikasi penting diubah, dihapus, atau ditarik oleh peng
 
 ---
 
+## ⚡ Keandalan Latar Belakang (Samsung One UI / Android 13+ Resilient)
+
+Untuk mengatasi pembunuhan proses agresif oleh sistem operasi OEM (seperti Samsung One UI, Xiaomi MIUI/HyperOS) dan Doze Mode pada Android 13+:
+
+1. **Self-Healing Rebind Engine**: Mendeteksi hilangnya koneksi binder dan secara dinamis memulihkan `NotificationListenerService` menggunakan `requestRebind()` dan pemulihan komponen `PackageManager`.
+2. **Boot & Package Update Auto-Recovery**: Menggunakan `BootCompletedReceiver` dengan `RECEIVE_BOOT_COMPLETED` dan `MY_PACKAGE_REPLACED` agar pemantauan langsung aktif kembali saat ponsel dinyalakan ulang.
+3. **Battery Optimization Handling**: Integrasi langsung dengan `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` untuk mencegah sistem mematikan penangkapan notifikasi di latar belakang.
+4. **Resilient Payload Parser**: Perlindungan terhadap crash saat mengekstrak Parcelable / Bundle yang berukuran besar atau memiliki format proprietary OEM.
+
+---
+
 ## ✨ Fitur Utama
 
 - 📸 **Immutable Notification Snapshots**: Setiap perubahan notifikasi (diedit, diganti, atau dihapus) disimpan sebagai snapshot terpisah yang tidak dapat ditimpa.
-- 🖼️ **Media Attachment Extractor**: Mengunduh dan mengarsipkan gambar/media lampiran notifikasi (hingga 50 MB) secara otomatis sebelum notifikasi aslinya hilang.
-- 🔍 **Pencarian & Pemfilteran Canggih**: Cari notifikasi berdasarkan teks, nama aplikasi asal, rentang waktu, atau status lampiran.
-- 🧹 **Retention Lifecycle & Automated Cleanup**: Pengaturan masa retensi arsip (default: 30 hari) yang dibersihkan secara berkala menggunakan Android `WorkManager`.
+- 🖼️ **Media Attachment Extractor**: Mengunduh dan mengarsipkan gambar/media lampiran notifikasi secara otomatis sebelum notifikasi aslinya hilang.
+- 🔍 **Pencarian & Pemfilteran Real-Time**: Cari notifikasi dengan debouncing cepat berdasarkan teks, nama aplikasi asal, rentang waktu, atau status lampiran.
+- 🧹 **Retention Lifecycle & Automated Cleanup**: Pengaturan masa retensi arsip (7 hari, 30 hari, 90 hari, atau permanen) yang dibersihkan secara berkala menggunakan Android `WorkManager`.
 - ⚡ **Per-App Auto-Dismiss Rules**: Opsi untuk otomatis menutup notifikasi asli per-aplikasi setelah notifikasi berhasil tersimpan di NotifPlus.
 - 🔒 **Biometric App Lock**: Mengunci akses ke riwayat notifikasi menggunakan sensor biometrik perangkat.
 - 📦 **Export & Archive Transfer**: Ekspor riwayat notifikasi yang sepenuhnya dikendalikan oleh pengguna.
@@ -85,12 +104,13 @@ NotifPlus/
 │   │   │   │   ├── di/            # Hilt Dependency Injection Modules
 │   │   │   │   ├── domain/        # Models, UseCases, Repository Interfaces
 │   │   │   │   ├── presentation/  # ViewModels (History, Detail, Settings, Access)
-│   │   │   │   ├── service/       # NotificationCaptureService & Workers
+│   │   │   │   ├── service/       # NotificationCaptureService, BootReceiver & Workers
 │   │   │   │   └── ui/            # Jetpack Compose Screens, Components, Theme
 │   │   │   ├── res/               # Drawables, Strings, XML Data Rules
 │   │   │   └── AndroidManifest.xml
 │   │   └── test/                  # Unit Tests (JUnit & Truth)
 │   └── build.gradle.kts
+├── docs/                          # Device Screenshots & Previews
 ├── gradle/
 │   └── libs.versions.toml         # Version Catalog
 ├── .gitignore                     # Android & DevSecOps Best Practices Ignore Rules
@@ -120,40 +140,39 @@ NotifPlus/
 
 2. **Jalankan Unit Test**:
    ```bash
-   # Linux / macOS
-   ./gradlew testDebugUnitTest
-
    # Windows (PowerShell)
-   .\gradlew.bat testDebugUnitTest
+   .\gradlew.bat test
+
+   # Linux / macOS
+   ./gradlew test
    ```
 
 3. **Build APK (Debug)**:
    ```bash
-   # Linux / macOS
-   ./gradlew assembleDebug
-
    # Windows (PowerShell)
    .\gradlew.bat assembleDebug
+
+   # Linux / macOS
+   ./gradlew assembleDebug
    ```
    *File APK hasil build akan berada di `app/build/outputs/apk/debug/app-debug.apk`.*
 
 4. **Install ke Perangkat / Emulator via ADB**:
    ```bash
-   .\gradlew.bat installDebug
+   adb install -r app/build/outputs/apk/debug/app-debug.apk
    ```
 
 5. **Aktivasi Izin Akses Notifikasi (PENTING)**:
    - Buka aplikasi **NotifPlus** di perangkat Anda.
-   - Ketuk tombol **"Grant Access"** pada banner permohonan izin.
-   - Sistem Android akan membuka menu *Device & App Notifications / Notification Access*.
-   - Aktifkan toggle untuk **NotifPlus**.
+   - Ketuk banner **"Akses Notifikasi"**.
+   - Aktifkan toggle untuk **NotifPlus** pada pengaturan sistem.
 
 ---
 
 ## 🔒 Praktik DevSecOps
 
 Repositori ini menerapkan siklus DevSecOps otomatis melalui **GitHub Actions**:
-1. **Secret & Credential Scanning**: Menggunakan `Gitleaks` untuk mendeteksi kunci API, token, atau kredensial rahasia yang tidak sengaja ter-commit.
+1. **Secret & Credential Scanning**: Menggunakan `Gitleaks` untuk mendeteksi kunci API, token, atau kredensial rahasia.
 2. **Static Application Security Testing (SAST)**: Menjalankan `Android Lint` untuk mengevaluasi celah keamanan, konfigurasi manifest, dan performa kode.
 3. **Automated Unit Testing & Build Validation**: Menjalankan seluruh rangkaian pengujian unit test dan memastikan build APK berhasil pada setiap commit di branch `main`.
 

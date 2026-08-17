@@ -1,7 +1,12 @@
 package com.notifplus.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.History
@@ -57,9 +62,13 @@ fun NotifPlusApp(accessViewModel: AccessViewModel) {
     val navController = rememberNavController()
     val accessGranted by accessViewModel.accessGranted.collectAsStateWithLifecycle()
     val listenerHealth by accessViewModel.listenerHealth.collectAsStateWithLifecycle()
+    val isIgnoringBatteryOptimizations by accessViewModel.isIgnoringBatteryOptimizations.collectAsStateWithLifecycle()
     var showDisclosure by rememberSaveable { mutableStateOf(false) }
+
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentEntry?.destination?.route.orEmpty()
+    val isDetailScreen = currentRoute.contains("DetailRoute")
+
     val destinations = listOf(
         TopLevelDestination(stringResource(R.string.history), Icons.Outlined.History, HistoryRoute),
         TopLevelDestination(stringResource(R.string.apps), Icons.Outlined.Apps, AppsRoute),
@@ -67,23 +76,30 @@ fun NotifPlusApp(accessViewModel: AccessViewModel) {
     )
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        modifier = Modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets.safeDrawing,
         bottomBar = {
-            NavigationBar {
-                destinations.forEach { destination ->
-                    val selected = currentRoute.contains(destination.route::class.simpleName.orEmpty())
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = {
-                            navController.navigate(destination.route) {
-                                launchSingleTop = true
-                                popUpTo(HistoryRoute) { saveState = true }
-                                restoreState = true
-                            }
-                        },
-                        icon = { Icon(destination.icon, contentDescription = destination.label) },
-                        label = { Text(destination.label) },
-                    )
+            AnimatedVisibility(
+                visible = !isDetailScreen,
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it }),
+            ) {
+                NavigationBar {
+                    destinations.forEach { destination ->
+                        val selected = currentRoute.contains(destination.route::class.simpleName.orEmpty())
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = {
+                                navController.navigate(destination.route) {
+                                    launchSingleTop = true
+                                    popUpTo(HistoryRoute) { saveState = true }
+                                    restoreState = true
+                                }
+                            },
+                            icon = { Icon(destination.icon, contentDescription = destination.label) },
+                            label = { Text(destination.label) },
+                        )
+                    }
                 }
             }
         },
@@ -100,6 +116,8 @@ fun NotifPlusApp(accessViewModel: AccessViewModel) {
                     onRequestAccess = { showDisclosure = true },
                     onRequestRebind = accessViewModel::requestRebind,
                     onOpenDetail = { id -> navController.navigate(DetailRoute(id)) },
+                    isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
+                    onRequestBatteryOptimization = accessViewModel::requestIgnoreBatteryOptimizations,
                 )
             }
             composable<AppsRoute> {
@@ -108,6 +126,8 @@ fun NotifPlusApp(accessViewModel: AccessViewModel) {
                     onRequestRebind = accessViewModel::requestRebind,
                     accessGranted = accessGranted,
                     listenerHealth = listenerHealth,
+                    isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
+                    onRequestBatteryOptimization = accessViewModel::requestIgnoreBatteryOptimizations,
                 )
             }
             composable<SettingsRoute> {
@@ -117,6 +137,8 @@ fun NotifPlusApp(accessViewModel: AccessViewModel) {
                     onRequestAccess = { showDisclosure = true },
                     onRequestRebind = accessViewModel::requestRebind,
                     onOpenApps = { navController.navigate(AppsRoute) },
+                    isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
+                    onRequestBatteryOptimization = accessViewModel::requestIgnoreBatteryOptimizations,
                 )
             }
             composable<DetailRoute> {

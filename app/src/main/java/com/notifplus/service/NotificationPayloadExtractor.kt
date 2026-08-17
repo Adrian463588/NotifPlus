@@ -433,17 +433,17 @@ private data class NativeMessagingMessage(
     val dataUri: String,
 )
 
-private fun Bundle.nativeMessagingMessages(key: String): List<NativeMessagingMessage> {
+private fun Bundle.nativeMessagingMessages(key: String): List<NativeMessagingMessage> = runCatching {
     val array = getParcelableArray(key)
         ?.toList()
         ?.mapNotNull { item -> (item as? Bundle)?.toNativeMessagingMessage() }
         .orEmpty()
-    if (array.isNotEmpty()) return array
-    return getParcelableArrayList<Parcelable>(key)
+    if (array.isNotEmpty()) return@runCatching array
+    getParcelableArrayList<Parcelable>(key)
         ?.toList()
         ?.mapNotNull { item -> (item as? Bundle)?.toNativeMessagingMessage() }
         .orEmpty()
-}
+}.getOrDefault(emptyList())
 
 @Suppress("DEPRECATION")
 private fun Bundle.toNativeMessagingMessage(): NativeMessagingMessage? {

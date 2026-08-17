@@ -5,14 +5,23 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.MarkEmailRead
+import androidx.compose.material.icons.outlined.MarkEmailUnread
+import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -20,7 +29,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -48,16 +56,30 @@ import com.notifplus.ui.components.removalLabel
 @OptIn(ExperimentalMaterial3Api::class)
 fun NotificationDetailScreen(
     onBack: () -> Unit,
+    modifier: Modifier = Modifier,
     viewModel: DetailViewModel = hiltViewModel(),
 ) {
     val detail by viewModel.detail.collectAsStateWithLifecycle()
-    Column(modifier = Modifier.fillMaxSize()) {
+    val isFavorite = detail?.summary?.isFavorite == true
+
+    Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text(stringResource(R.string.notification_detail)) },
-            navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.back)) } },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                        contentDescription = stringResource(R.string.back),
+                    )
+                }
+            },
             actions = {
                 IconButton(onClick = viewModel::toggleFavorite) {
-                    Icon(Icons.Outlined.Star, contentDescription = stringResource(R.string.favorite))
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                        contentDescription = stringResource(if (isFavorite) R.string.unfavorite else R.string.favorite),
+                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             },
         )
@@ -65,35 +87,96 @@ fun NotificationDetailScreen(
             LazyColumn(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
             ) {
-                item { Text(item.summary.appLabel, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
-                item { Text(item.summary.latestTitle.ifBlank { stringResource(R.string.untitled_notification) }, style = MaterialTheme.typography.headlineSmall) }
-                item { Text(stringResource(R.string.package_format, item.summary.packageName), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 item {
                     Text(
-                        stringResource(
+                        text = item.summary.appLabel,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                item {
+                    Text(
+                        text = item.summary.latestTitle.ifBlank { stringResource(R.string.untitled_notification) },
+                        style = MaterialTheme.typography.headlineSmall,
+                    )
+                }
+                item {
+                    Text(
+                        text = stringResource(R.string.package_format, item.summary.packageName),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                item {
+                    Text(
+                        text = stringResource(
                             R.string.status_format,
                             if (item.summary.isActive) stringResource(R.string.active) else removalLabel(item.summary),
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                item { Text(stringResource(R.string.revision_count_format, item.summary.revisionCount), style = MaterialTheme.typography.bodyMedium) }
+                item {
+                    Text(
+                        text = stringResource(R.string.revision_count_format, item.summary.revisionCount),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
                 item { DetailField(stringResource(R.string.removal_reason_code), item.summary.removalReasonCode?.toString().orEmpty()) }
                 item { Text(stringResource(R.string.auto_dismiss_status_format, item.summary.autoDismissStatus.name), style = MaterialTheme.typography.bodyMedium) }
+
                 items(item.snapshots, key = { it.snapshot.snapshotId }) { snapshot ->
                     SnapshotTimelineCard(snapshot)
                 }
+
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = viewModel::toggleRead) { Text(stringResource(R.string.toggle_read)) }
-                        OutlinedButton(onClick = viewModel::delete) { Text(stringResource(R.string.delete)) }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                    ) {
+                        OutlinedButton(
+                            onClick = viewModel::toggleRead,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(
+                                imageVector = if (item.summary.isRead) Icons.Outlined.MarkEmailUnread else Icons.Outlined.MarkEmailRead,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(if (item.summary.isRead) R.string.mark_as_unread else R.string.mark_as_read),
+                            )
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.delete(onComplete = onBack)
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.delete))
+                        }
                     }
                 }
             }
         } ?: Box(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
             contentAlignment = Alignment.Center,
         ) {
             Text(stringResource(R.string.notification_not_found), modifier = Modifier.padding(24.dp))

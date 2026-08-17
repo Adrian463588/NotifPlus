@@ -8,4 +8,6 @@ interface NotificationAccessRepository {
     fun refreshAccessState()
     fun openSystemSettings()
     fun requestRebind(): Boolean
+    fun isIgnoringBatteryOptimizations(): Boolean
+    fun requestIgnoreBatteryOptimizations()
 }

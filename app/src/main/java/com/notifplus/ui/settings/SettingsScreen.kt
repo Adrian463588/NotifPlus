@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.FileUpload
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -46,6 +49,9 @@ fun SettingsScreen(
     onRequestAccess: () -> Unit,
     onRequestRebind: () -> Unit,
     onOpenApps: () -> Unit,
+    modifier: Modifier = Modifier,
+    isIgnoringBatteryOptimizations: Boolean = true,
+    onRequestBatteryOptimization: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val retention by viewModel.retentionSettings.collectAsStateWithLifecycle()
@@ -56,50 +62,108 @@ fun SettingsScreen(
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
         it?.let(viewModel::import)
     }
-    Column(modifier = Modifier.fillMaxSize()) {
+
+    Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(title = { Text(stringResource(R.string.settings)) })
-        AccessBanner(accessGranted, listenerHealth, onRequestAccess, onRequestRebind, Modifier.padding(horizontal = 16.dp))
-        operationError?.let { error ->
-            Text(
-                text = stringResource(R.string.operation_failed, error),
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
-        LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+        LazyColumn(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+        ) {
+            item {
+                AccessBanner(
+                    accessGranted = accessGranted,
+                    listenerHealth = listenerHealth,
+                    onRequestAccess = onRequestAccess,
+                    onRequestRebind = onRequestRebind,
+                    isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations,
+                    onRequestBatteryOptimization = onRequestBatteryOptimization,
+                )
+            }
+
+            operationError?.let { error ->
+                item {
+                    Text(
+                        text = stringResource(R.string.operation_failed, error),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+
             item {
                 Text(stringResource(R.string.archive_retention), style = MaterialTheme.typography.titleLarge)
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                ) {
                     Text(stringResource(R.string.retention_enabled), modifier = Modifier.weight(1f))
-                    Switch(checked = retention.enabled, onCheckedChange = { viewModel.setRetention(it, retention.days) })
+                    Switch(
+                        checked = retention.enabled,
+                        onCheckedChange = { viewModel.setRetention(it, retention.days) },
+                    )
                 }
                 RetentionOptions(retention, viewModel::setRetention)
-                OutlinedButton(onClick = viewModel::deleteExpiredNow) {
+
+                OutlinedButton(
+                    onClick = viewModel::deleteExpiredNow,
+                    modifier = Modifier.padding(top = 4.dp),
+                ) {
                     Icon(Icons.Outlined.Delete, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.delete_now))
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(top = 10.dp),
+                ) {
                     OutlinedButton(onClick = { exportLauncher.launch("notifplus-export.json") }) {
+                        Icon(Icons.Outlined.FileDownload, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.export_archive))
                     }
                     OutlinedButton(onClick = { importLauncher.launch(arrayOf("application/json")) }) {
+                        Icon(Icons.Outlined.FileUpload, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.import_archive))
                     }
                 }
             }
+
             item {
                 HorizontalDivider()
                 Text(stringResource(R.string.original_auto_dismiss), style = MaterialTheme.typography.titleLarge)
-                Text(stringResource(R.string.auto_dismiss_warning), style = MaterialTheme.typography.bodyMedium)
-                Button(onClick = onOpenApps, modifier = Modifier.padding(top = 8.dp)) {
+                Text(
+                    stringResource(R.string.auto_dismiss_warning),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+                Button(
+                    onClick = onOpenApps,
+                    modifier = Modifier.padding(top = 10.dp),
+                ) {
+                    Icon(Icons.Outlined.Settings, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.manage_app_rules))
                 }
             }
+
             item {
                 HorizontalDivider()
                 Text(stringResource(R.string.security_title), style = MaterialTheme.typography.titleLarge)
-                Text(stringResource(R.string.security_body), style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    stringResource(R.string.security_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
             }
         }
     }
@@ -111,11 +175,20 @@ private fun RetentionOptions(
     onChange: (Boolean, Int) -> Unit,
 ) {
     RetentionSettings.OPTIONS.forEach { days ->
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            RadioButton(selected = settings.days == days, onClick = { onChange(settings.enabled, days) })
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            RadioButton(
+                selected = settings.days == days,
+                onClick = { onChange(settings.enabled, days) },
+            )
             Text(
-                text = if (days == RetentionSettings.MANUAL_ONLY) stringResource(R.string.retention_manual)
-                else stringResource(R.string.retention_days_format, days),
+                text = if (days == RetentionSettings.MANUAL_ONLY) {
+                    stringResource(R.string.retention_manual)
+                } else {
+                    stringResource(R.string.retention_days_format, days)
+                },
             )
         }
     }
