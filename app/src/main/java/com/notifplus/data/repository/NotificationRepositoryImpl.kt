@@ -35,7 +35,13 @@ class NotificationRepositoryImpl @Inject constructor(
 ) : NotificationRepository {
     override fun observeHistory(query: HistoryQuery): Flow<PagingData<NotificationThreadSummary>> =
         Pager(PagingConfig(pageSize = 30, enablePlaceholders = false)) {
-            dao.pagingSource(query.searchText.trim(), query.packageName)
+            dao.pagingSource(
+                searchText = query.searchText.trim(),
+                packageName = query.packageName,
+                onlyUnread = query.onlyUnread,
+                onlyFavorites = query.onlyFavorites,
+                onlyWithMedia = query.onlyWithMedia,
+            )
         }.flow.map { page -> page.map(NotificationThreadSummaryRow::toDomain) }
 
     override fun observeKnownPackages(): Flow<List<String>> = dao.observeKnownPackages()

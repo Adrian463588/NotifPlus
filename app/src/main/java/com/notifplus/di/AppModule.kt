@@ -61,4 +61,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindRetentionRepository(impl: RetentionRepositoryImpl): RetentionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSecurityRepository(impl: com.notifplus.data.repository.SecurityRepositoryImpl): com.notifplus.domain.repository.SecurityRepository
 }

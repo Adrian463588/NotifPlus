@@ -37,12 +37,29 @@ private object PreferenceKeys {
     val archiveRetentionEnabled = booleanPreferencesKey("archive_retention_enabled")
     val archiveRetentionDays = intPreferencesKey("archive_retention_days")
     val autoDismissPackages = stringSetPreferencesKey("auto_dismiss_packages")
+    val biometricLockEnabled = booleanPreferencesKey("biometric_lock_enabled")
     val listenerState = stringPreferencesKey("listener_state")
     val listenerLastConnectedAt = longPreferencesKey("listener_last_connected_at")
     val listenerLastPostedAt = longPreferencesKey("listener_last_posted_at")
     val listenerLastPersistedAt = longPreferencesKey("listener_last_persisted_at")
     val listenerQueueDepth = intPreferencesKey("listener_queue_depth")
     val listenerConsecutiveFailures = intPreferencesKey("listener_consecutive_failures")
+}
+
+class SecurityRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
+) : com.notifplus.domain.repository.SecurityRepository {
+    override fun observeBiometricLockEnabled(): Flow<Boolean> = context.notifPlusDataStore.data.map { preferences ->
+        preferences[PreferenceKeys.biometricLockEnabled] ?: false
+    }
+
+    override suspend fun isBiometricLockEnabled(): Boolean = observeBiometricLockEnabled().first()
+
+    override suspend fun setBiometricLockEnabled(enabled: Boolean) {
+        context.notifPlusDataStore.edit { preferences ->
+            preferences[PreferenceKeys.biometricLockEnabled] = enabled
+        }
+    }
 }
 
 class AutoDismissRepositoryImpl @Inject constructor(

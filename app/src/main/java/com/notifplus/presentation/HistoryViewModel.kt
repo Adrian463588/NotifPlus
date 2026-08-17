@@ -22,9 +22,17 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class QuickFilterType {
+    ALL,
+    UNREAD,
+    FAVORITES,
+    WITH_MEDIA,
+}
+
 data class HistoryUiState(
     val searchText: String = "",
     val packageName: String? = null,
+    val quickFilter: QuickFilterType = QuickFilterType.ALL,
 )
 
 @HiltViewModel
@@ -34,16 +42,28 @@ class HistoryViewModel @Inject constructor(
 ) : ViewModel() {
     private val _searchText = MutableStateFlow("")
     private val _packageFilter = MutableStateFlow<String?>(null)
+    private val _quickFilter = MutableStateFlow(QuickFilterType.ALL)
 
-    val uiState: StateFlow<HistoryUiState> = combine(_searchText, _packageFilter) { text, pkg ->
-        HistoryUiState(searchText = text, packageName = pkg)
+    val uiState: StateFlow<HistoryUiState> = combine(
+        _searchText,
+        _packageFilter,
+        _quickFilter,
+    ) { text, pkg, filter ->
+        HistoryUiState(searchText = text, packageName = pkg, quickFilter = filter)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
 
     val notifications: Flow<PagingData<NotificationThreadSummary>> = combine(
         _searchText.debounce(300L),
         _packageFilter,
-    ) { text, pkg ->
-        HistoryQuery(text.trim(), pkg)
+        _quickFilter,
+    ) { text, pkg, filter ->
+        HistoryQuery(
+            searchText = text.trim(),
+            packageName = pkg,
+            onlyUnread = filter == QuickFilterType.UNREAD,
+            onlyFavorites = filter == QuickFilterType.FAVORITES,
+            onlyWithMedia = filter == QuickFilterType.WITH_MEDIA,
+        )
     }.flatMapLatest { query ->
         repository.observeHistory(query)
     }.cachedIn(viewModelScope)
@@ -58,6 +78,10 @@ class HistoryViewModel @Inject constructor(
         _packageFilter.value = packageName
     }
 
+    fun setQuickFilter(filter: QuickFilterType) {
+        _quickFilter.value = filter
+    }
+
     fun markRead(threadId: String, isRead: Boolean) {
         viewModelScope.launch { repository.markRead(threadId, isRead) }
     }
@@ -70,3 +94,4 @@ class HistoryViewModel @Inject constructor(
         viewModelScope.launch { repository.delete(threadId) }
     }
 }
+

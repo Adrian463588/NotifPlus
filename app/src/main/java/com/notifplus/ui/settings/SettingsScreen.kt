@@ -18,9 +18,11 @@ import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
@@ -56,6 +58,8 @@ fun SettingsScreen(
 ) {
     val retention by viewModel.retentionSettings.collectAsStateWithLifecycle()
     val operationError by viewModel.operationError.collectAsStateWithLifecycle()
+    val isBiometricEnabled by viewModel.isBiometricLockEnabled.collectAsStateWithLifecycle()
+    val operationMessage by viewModel.operationMessage.collectAsStateWithLifecycle()
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) {
         it?.let(viewModel::export)
     }
@@ -155,6 +159,63 @@ fun SettingsScreen(
                 }
             }
 
+            operationMessage?.let { msg ->
+                item {
+                    Card(
+                        colors = androidx.compose.material3.CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(14.dp),
+                        ) {
+                            Text(
+                                text = msg,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f),
+                            )
+                            IconButton(onClick = viewModel::clearMessages) {
+                                Icon(
+                                    Icons.Outlined.Delete,
+                                    contentDescription = stringResource(R.string.close),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                HorizontalDivider()
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.biometric_lock_title),
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                        Text(
+                            text = stringResource(R.string.biometric_lock_subtitle),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+                    Switch(
+                        checked = isBiometricEnabled,
+                        onCheckedChange = { viewModel.setBiometricLockEnabled(it) },
+                    )
+                }
+            }
+
             item {
                 HorizontalDivider()
                 Text(stringResource(R.string.security_title), style = MaterialTheme.typography.titleLarge)
@@ -168,6 +229,7 @@ fun SettingsScreen(
         }
     }
 }
+
 
 @Composable
 private fun RetentionOptions(

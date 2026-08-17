@@ -40,6 +40,7 @@ import com.notifplus.domain.model.NotificationListenerHealth
 import com.notifplus.presentation.HistoryViewModel
 import com.notifplus.ui.components.AccessBanner
 import com.notifplus.ui.components.EmptyState
+import com.notifplus.ui.components.FilterChipGroup
 import com.notifplus.ui.components.NotificationCard
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,6 +100,14 @@ fun HistoryScreen(
                         }
                     },
                     singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            item {
+                FilterChipGroup(
+                    selectedFilter = uiState.quickFilter,
+                    onFilterSelected = viewModel::setQuickFilter,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

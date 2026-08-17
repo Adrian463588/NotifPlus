@@ -1,6 +1,7 @@
 package com.notifplus.ui.components
 
 import android.graphics.drawable.Drawable
+import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
@@ -18,7 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.MarkEmailRead
@@ -38,8 +39,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -60,6 +65,9 @@ fun NotificationCard(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
+    val clipboardManager = LocalClipboardManager.current
+    val copiedToastText = stringResource(R.string.text_copied)
     val appIconDrawable by produceState<Drawable?>(initialValue = null, key1 = summary.packageName) {
         value = withContext(Dispatchers.IO) {
             runCatching { context.packageManager.getApplicationIcon(summary.packageName) }.getOrNull()
@@ -199,7 +207,32 @@ fun NotificationCard(
                 }
 
                 IconButton(
-                    onClick = onToggleRead,
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        val textToCopy = buildString {
+                            if (summary.latestTitle.isNotBlank()) append(summary.latestTitle).append("\n")
+                            if (summary.latestPreviewText.isNotBlank()) append(summary.latestPreviewText)
+                        }.trim()
+                        if (textToCopy.isNotBlank()) {
+                            clipboardManager.setText(AnnotatedString(textToCopy))
+                            Toast.makeText(context, copiedToastText, Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.ContentCopy,
+                        contentDescription = stringResource(R.string.copy_text),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onToggleRead()
+                    },
                     modifier = Modifier.size(36.dp),
                 ) {
                     Icon(
@@ -211,7 +244,10 @@ fun NotificationCard(
                 }
 
                 IconButton(
-                    onClick = onToggleFavorite,
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onToggleFavorite()
+                    },
                     modifier = Modifier.size(36.dp),
                 ) {
                     Icon(
@@ -223,7 +259,10 @@ fun NotificationCard(
                 }
 
                 IconButton(
-                    onClick = onDelete,
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onDelete()
+                    },
                     modifier = Modifier.size(36.dp),
                 ) {
                     Icon(

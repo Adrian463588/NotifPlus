@@ -66,6 +66,9 @@ enum class PayloadAvailability {
 data class HistoryQuery(
     val searchText: String = "",
     val packageName: String? = null,
+    val onlyUnread: Boolean = false,
+    val onlyFavorites: Boolean = false,
+    val onlyWithMedia: Boolean = false,
 )
 
 data class AutoDismissRule(

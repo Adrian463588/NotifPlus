@@ -75,10 +75,23 @@ interface NotificationDao {
               )
         ) OR t.appLabel LIKE '%' || :searchText || '%' OR t.packageName LIKE '%' || :searchText || '%')
           AND (:packageName IS NULL OR t.packageName = :packageName)
+          AND (:onlyUnread = 0 OR t.isRead = 0)
+          AND (:onlyFavorites = 0 OR t.isFavorite = 1)
+          AND (:onlyWithMedia = 0 OR EXISTS (
+              SELECT 1 FROM notification_attachments att
+              INNER JOIN notification_snapshots attSnap ON attSnap.snapshotId = att.snapshotId
+              WHERE attSnap.threadId = t.threadId
+          ))
         ORDER BY s.capturedAt DESC
         """,
     )
-    fun pagingSource(searchText: String, packageName: String?): PagingSource<Int, NotificationThreadSummaryRow>
+    fun pagingSource(
+        searchText: String,
+        packageName: String?,
+        onlyUnread: Boolean = false,
+        onlyFavorites: Boolean = false,
+        onlyWithMedia: Boolean = false,
+    ): PagingSource<Int, NotificationThreadSummaryRow>
 
     @Query("SELECT * FROM notification_threads WHERE threadId = :threadId LIMIT 1")
     suspend fun findThread(threadId: String): NotificationThreadEntity?

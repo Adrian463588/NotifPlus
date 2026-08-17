@@ -105,4 +105,13 @@
     <string name="export_archive">Export JSON</string>
     <string name="import_archive">Import JSON</string>
     <string name="operation_failed">Operasi gagal: %1$s</string>
+    <string name="copy_text">Salin teks</string>
+    <string name="text_copied">Teks notifikasi disalin ke papan klip</string>
+    <string name="biometric_lock_title">Kunci Aplikasi Biometrik</string>
+    <string name="biometric_lock_subtitle">Minta sidik jari, pengenalan wajah, atau PIN saat membuka NotifPlus.</string>
+    <string name="biometric_prompt_title">Buka Kunci NotifPlus</string>
+    <string name="biometric_prompt_subtitle">Gunakan biometrik atau kredensial perangkat untuk mengakses arsip notifikasi.</string>
+    <string name="export_success">Berhasil mengekspor %1$d notifikasi.</string>
+    <string name="import_success">Berhasil mengimpor %1$d notifikasi.</string>
 </resources>
+

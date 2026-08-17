@@ -42,12 +42,16 @@ class SettingsViewModel @Inject constructor(
     private val retentionRepository: RetentionRepository,
     private val autoDismissRepository: AutoDismissRepository,
     private val notificationRepository: NotificationRepository,
+    private val securityRepository: com.notifplus.domain.repository.SecurityRepository,
     private val setRetentionSettings: SetRetentionSettingsUseCase,
     private val deleteExpiredNotifications: DeleteExpiredNotificationsUseCase,
     private val archiveTransfer: NotificationArchiveTransfer,
 ) : ViewModel() {
     private val _operationError = MutableStateFlow<String?>(null)
     val operationError: StateFlow<String?> = _operationError.asStateFlow()
+
+    private val _operationMessage = MutableStateFlow<String?>(null)
+    val operationMessage: StateFlow<String?> = _operationMessage.asStateFlow()
 
     private val _appSearchQuery = MutableStateFlow("")
     val appSearchQuery: StateFlow<String> = _appSearchQuery.asStateFlow()
@@ -57,6 +61,9 @@ class SettingsViewModel @Inject constructor(
 
     val retentionSettings: StateFlow<RetentionSettings> = retentionRepository.observeSettings()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RetentionSettings())
+
+    val isBiometricLockEnabled: StateFlow<Boolean> = securityRepository.observeBiometricLockEnabled()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     val appRules: Flow<List<AppRuleUiModel>> = combine(
         notificationRepository.observeKnownPackages(),
@@ -119,17 +126,39 @@ class SettingsViewModel @Inject constructor(
         runSafely { autoDismissRepository.setEnabled(packageName, enabled) }
     }
 
+    fun setBiometricLockEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            _operationError.value = null
+            securityRepository.setBiometricLockEnabled(enabled)
+        }
+    }
+
+    fun clearMessages() {
+        _operationError.value = null
+        _operationMessage.value = null
+    }
+
     fun export(uri: Uri) {
         viewModelScope.launch {
             _operationError.value = null
-            archiveTransfer.export(uri).exceptionOrNull()?.let(::reportFailure)
+            archiveTransfer.export(uri).fold(
+                onSuccess = {
+                    _operationMessage.value = "Ekspor arsip berhasil disalin ke file."
+                },
+                onFailure = ::reportFailure,
+            )
         }
     }
 
     fun import(uri: Uri) {
         viewModelScope.launch {
             _operationError.value = null
-            archiveTransfer.import(uri).exceptionOrNull()?.let(::reportFailure)
+            archiveTransfer.import(uri).fold(
+                onSuccess = { count ->
+                    _operationMessage.value = "Berhasil mengimpor $count notifikasi."
+                },
+                onFailure = ::reportFailure,
+            )
         }
     }
 
@@ -144,3 +173,4 @@ class SettingsViewModel @Inject constructor(
         _operationError.value = error.message ?: "Operasi tidak dapat diselesaikan"
     }
 }
+
